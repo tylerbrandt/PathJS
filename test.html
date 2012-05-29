@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Test Path.js</title>
+		<!-- jQuery needed to run Qunit only -->
+		<script src='jquery-1.7.2.min.js'></script>
+		<script src='qunit.js'></script>
+		<link rel='stylesheet' href='qunit.css' />
+		<script src='path.js'></script>
+		<script>
+			$(document).ready(function() {
+
+				module('Initialize');
+
+				test('A new empty path should:',function() {
+					var p = new Path();
+					ok(p instanceof Path, 'be a Path');
+					ok(p instanceof Array, 'be an Array');
+					equal(p.length, 0, 'have a length of 0');
+				});
+
+				test('Path supports the methods:', function() {
+					var p = new Path(),
+						supportedMethods = ['clone', 'map', 'filter', 'slice', 'toString'],
+						i,method;
+					for (i in supportedMethods) {
+						method = supportedMethods[i];
+						ok(method in p && typeof p[method] === 'function', method);
+					}
+				});
+
+				test('When initialized with an empty array:', function() {
+					var path = new Path([]);
+					equal(path.length, 0, 'the length should be 0');
+				});
+
+				test('When initialized with an array of one point:', function() {
+					var p1 = [0,0],
+						path = new Path([p1]);
+					equal(path[0], p1, 'the first element should be the first point');
+					equal(path.length, 1, 'the length should be 1');
+				});
+
+				test('When initialized with an array of two points:', function() {
+					var p1 = [0,0],
+						p2 = [1,1],
+						path = new Path([p1, p2]);
+					equal(path[0], p1, 'the first element should be the first point');
+					equal(path[1], p2, 'the second element should be the second point');
+					equal(path.length, 2, 'the length should be 2');
+				});
+
+				module('SVG String');
+
+				test('When initialized with an empty string:', function() {
+					var str = '',
+						path = new Path(str);
+					equal(path.length, 0, 'the length should be 0');
+				});
+
+				test('When initialized with a moveto command:', function() {
+					var str = 'M 0 0',
+						path = new Path(str);
+					equal(path.length, 1, 'the length should be 1');
+					deepEqual(path[0], [0,0], 'the first point should be the moved to point');
+				});
+
+				test('When initialized with a moveto command (1,2):', function() {
+					var str = 'M 1 2',
+						path = new Path(str);
+					equal(path.length, 1, 'the length should be 1');
+					deepEqual(path[0], [1,2], 'the first point should be the moved to point');
+				});
+
+				test('When initialized without a command:', function() {
+					var str = '0 0';
+					raises(function() {
+						var path = new Path(str);
+					}, 'throws an exception');
+				});
+
+				test('When initialized with partial point:', function() {
+					var str = 'M 0';
+					raises(function() {
+						var path = new Path(str);
+					}, 'throws an exception');
+				});
+
+				test('When initialized with float point arguments:', function() {
+					var str = 'M 0 0.5',
+						path = new Path(str);
+					deepEqual(path[0], [0,0], 'truncates the arguments');
+				});
+
+				test('When initialized with a non-numeric point argument:', function() {
+					var str = 'M a b';
+					raises(function() {
+						var path = new Path(str);
+					}, 'throws an exception');
+				});
+
+				test('When initialized with a lineto command:', function() {
+					var str = 'L 0 0';
+					raises(function() {
+						var path = new Path(str);
+					}, 'throws an exception');
+				});
+
+				test('When initialized with M followed by L', function() {
+					var str = 'M 0 0 L 100 100',
+						path = new Path(str);
+					equal(path.length, 2, 'length should be 2');
+					deepEqual(path[0], [0,0], 'first point should be the initial point');
+					deepEqual(path[1], [100,100], 'second point should be the second point');
+				});
+
+				test('When initialized with M followed by M', function() {
+					var str = 'M 0 0 M 100 100';
+					raises(function() {
+						var path = new Path(str);
+					}, 'raises an exception');
+				});
+
+				test('Extra junk on the end', function() {
+					var str = 'M 100 100 l -50 50 25';
+					raises(function() {
+						var path = new Path(str);
+					}, 'raises an exception');
+				});
+
+				test('When initialized with a z-terminated string', function() {
+					var str = 'M 0 0 z',
+						path = new Path(str);
+					ok(path.length === 1, 'should have the same length as without');
+					deepEqual(path[0], [0,0], 'should have the last point preceding the z');
+				});
+
+				test('Relative integer coordinates', function() {
+					var str = 'M 100 100 l -50 25',
+						path = new Path(str);
+					ok(path.length === 2, 'should create an additional point the same as absolute coordinates');
+					deepEqual(path[1], [50,125], 'should be relative to the prior point');
+				});
+
+				test('Two relative integer coordinates in a row', function() {
+					var str = 'M 100 100 l -50 25 l 10 -30',
+						path = new Path(str);
+					ok(path.length === 3, 'should create an additional point the same as absolute coordinates');
+					deepEqual(path[2], [60,95], 'should be relative to the prior point');
+				});
+
+				test('Relative followed by absolute', function() {
+					var str = 'M 100 100 l -50 25 L 10 -30',
+						path = new Path(str);
+					deepEqual(path[2], [10,-30], 'should use absolute coordinates');
+				});
+
+				module('push');
+
+				test('on an empty Path should', function() {
+					var path = new Path(),
+						newPt = [0,10];
+					path.push(newPt);
+					equal(path.length, 1, 'increment the length');
+					deepEqual(path[path.length - 1], newPt, 'append the new point to the path');
+				});
+
+				test('on a Path with points should', function() {
+					var path = new Path([[0,10],[5,6]]),
+						newPt = [50,60];
+					path.push(newPt);
+					equal(path.length, 3, 'increment the length');
+					deepEqual(path[path.length - 1], newPt, 'append the new point to the path');
+					deepEqual(path[0], [0,10], 'not modify the existing points');
+					deepEqual(path[1], [5,6], 'not modify the existing points');
+				});	
+
+				module('toString');
+
+				test('on an empty Path', function() {
+					var path = new Path();
+					equal(path.toString(), '', 'returns the empty string');
+				});
+
+				test('on a path with one point', function() {
+					var path = new Path([[0,0]]),
+						p2 = new Path([[100,200]]);
+					equal(path.toString(), 'M 0 0', 'returns a moveto that point');
+					equal(p2.toString(), 'M 100 200', 'returns a moveto that point');
+				});
+
+				test('on a path with two points', function() {
+					var path = new Path([[0,0], [100,50]]),
+						p2 = new Path([[100,200], [-50, 25]]);
+					equal(path.toString(), 'M 0 0 L 100 50', 'returns a moveto that point followed by a lineto the second point');
+					equal(p2.toString(), 'M 100 200 L -50 25', 'returns a moveto that point followed by a lineto the second point');
+				});
+
+				test('on a closed path', function() {
+					var path = new Path('M 0 0 L 50 50 L 25 75 z');
+					equal(path.toString(), 'M 0 0 L 50 50 L 25 75 z', 'should be closed in the result as well');
+				});
+
+				module('map');
+
+				test('on an empty path', function() {
+					var path = new Path(),
+						f = function(pt) { return pt; };
+					ok(path.map(f) instanceof Path, 'should return a Path');
+				});
+
+				test('on a Path with elements', function() {
+					var path = new Path([[0,0]]),
+						f = function(pt) { return [pt[0] + 50, pt[1] + 25]; },
+						m = path.map(f);
+					ok(m instanceof Path, 'should return a path');
+					equal(m.length, path.length, 'should return a path of the samne length');
+					deepEqual(m[0], [50,25], 'should apply the function to each element of the path');
+				});
+
+				module('filter');
+
+				test('on an empty path', function() {
+					var path = new Path(),
+						f = function(pt) { return true; };
+					ok(path.filter(f) instanceof Path, 'should return a Path');
+				});
+
+				test('on a path with elements', function() {
+					var path = new Path([[0,0], [100,200]]),
+						f = function(pt) { return pt[0] === 0; },
+						filtered = path.filter(f);
+					ok(filtered instanceof Path, 'should return a Path');
+					equal(filtered.length, 1, 'should return a path of the correct length');
+					deepEqual(filtered[0], [0,0], 'should return a path of pts which match the predicate');
+				});
+
+				module('slice');
+
+				test('on an empty Path', function() {
+					var path = new Path();
+					ok(path.slice(0) instanceof Path, 'should return a Path');
+				});
+
+				test('on a single point', function() {
+					var path = new Path([[0,0]]),
+						pathSlice = path.slice(0);
+					ok(pathSlice instanceof Path, 'should return a Path');
+					equal(pathSlice.length, 1, 'should have a length of 1');
+					deepEqual(pathSlice[0], [0,0], 'should return a path with same point');
+				});
+
+				test('on a path with 2 points', function() {
+					var path = new Path([[0,0], [100,150]]),
+						pathSlice = path.slice(0,1);
+					ok(pathSlice instanceof Path, 'should return a Path');
+					equal(pathSlice.length, 1, 'should have a length of 1');
+					deepEqual(pathSlice[0], [0,0], 'should return a path with same point');
+				});
+
+				test('on a path with 2 points and a slice size of 2', function() {
+					var path = new Path([[0,0], [100,150]]),
+						pathSlice2 = path.slice(0,2);
+					ok(pathSlice2 instanceof Path, 'should return a Path');
+					equal(pathSlice2.length, 2, 'should have a length of 2');
+					deepEqual(pathSlice2[1], [100,150], 'should return a path with same point');
+				});
+
+				module('clone');
+
+				test('on an empty Path', function() {
+					var path = new Path();
+					deepEqual(path.clone(), path, 'should return an identical Path');
+				});
+
+				test('on a path with elements', function() {
+					var path = new Path([[0,0],[100,200]]);
+					deepEqual(path.clone(), path, 'should return an identical Path');
+				});
+
+				test('modifying cloned object should not modify the initial object', function() {
+					var path = new Path([[0,0]]),
+						c = path.clone();
+					c.push([1,1]);
+					equal(path.length, 1, 'length should be the same');
+					equal(c.length, 2, 'length should be modified on the clone');
+				});
+
+				test('cloned path with closepath should also have closepath', function() {
+					var path = new Path('M 0 0 L 1 1 L 2 2 z'),
+						c = path.clone();
+					equal(path.toString(), c.toString(), 'should have the same string representation');
+				});
+
+				test('cloned path w/o closepath should not have closepath', function() {
+					var path = new Path('M 0 0 L 1 1 L 2 2'),
+						c = path.clone();
+					equal(path.toString(), c.toString(), 'should have the same string representation');
+				});
+			});
+		</script>
+	</head>
+	<body>
+		<h1 id='qunit-header'>QUnit example</h1>
+		<h2 id='qunit-banner'></h2>
+		<div id='qunit-testrunner-toolbar'></div>
+		<h2 id='qunit-userAgent'></h2>
+		<ol id='qunit-tests'></ol>
+		<div id='qunit-fixture'>test markup, will be hidden</div>
+	</body>
+</html>

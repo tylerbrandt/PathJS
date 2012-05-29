@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>path.js Demo</title>
+		<style>
+			label {
+				width: 80px;
+				display: inline-block;
+			}
+
+			.result {
+				background: #FFFFCC;
+			}
+
+			.example {
+				font-family: monospace;
+				background: #DDD;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>path.js Demo</h1>
+		<p>Enter an SVG path string below. Path will be generated as you type.</p>
+		<p>Example: <span class="example">M 0 0 L 50 40 l 5 -10 z</span></p>
+			<label for="pathString">SVG String: </label>
+			<input type="text" id="pathString" />
+		<p>Alternatively, enter an array of 2-element arrays in JSON and click "Generate Path"</p>
+		<p>Example: <span class="example">[[0,0], [50,40], [55,30]]</span></p>
+			<label for="inputJSON">JSON: </label>
+			<input type="text" id="pathJSON" />
+			<button id="generatePath">Generate Path</button> 
+		<div class="result">
+			<h2>Result</h2>
+			<p>Path:  <span id="resultJSON"></span></p>
+			<p>SVG:   <span id="resultSVG"></span></p>
+			<p><span id="error"></span></p>
+		</div>
+
+		<script src="path.js"></script>
+		<script>
+			/*jslint browser: true, sloppy: true, eqeq: true, white: true, plusplus: true, maxerr: 50, indent: 4 */
+			/*global Path */
+
+			(function() {
+				var resultJSON = document.getElementById('resultJSON'),
+					resultSVG = document.getElementById('resultSVG'),
+					error = document.getElementById('error'),
+					input = document.getElementById('pathString'),
+					button = document.getElementById('generatePath'),
+					path,
+					
+					displayResults = function(path) {
+						resultJSON.innerHTML = JSON.stringify(path);
+						resultSVG.innerHTML = path.toString();
+						error.innerHTML = '';
+					},
+					displayError = function(e) {
+						resultJSON.innerHTML = resultSVG.innerHTML = '';
+						error.innerHTML = e.toString();
+					};
+
+				input.addEventListener('keyup', function() {
+					try {
+						path = new Path(input.value);
+						displayResults(path);	
+					} catch (e) {
+						displayError(e);
+					}
+				});
+
+				button.addEventListener('click', function() {
+					var pathJSON = document.getElementById('pathJSON'),
+						inputArray;
+
+					try {
+						inputArray = JSON.parse(pathJSON.value);
+						path = new Path(inputArray);
+						displayResults(path);
+					} catch (e) {
+						displayError(e);
+					}
+				});
+			}());
+		</script>
+	</body>
+</html>
